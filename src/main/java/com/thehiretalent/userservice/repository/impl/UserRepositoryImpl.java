@@ -24,9 +24,16 @@ public class UserRepositoryImpl implements UserRepository {
                 "            d.department_name " +
                 "FROM test_db.\"user\" u " +
                 "JOIN test_db.department_user du ON u.user_id = du.user_id " +
-                "JOIN test_db.department d ON d.department_id = du.department_id";
+                "JOIN test_db.department d ON d.department_id = du.department_id " +
+                "WHERE u.user_id in (SELECT eu.user_id " +
+                "               FROM test_db.\"user\" eu " +
+                "               LIMIT ? " +
+                "               OFFSET ?)"
+                ;
 
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+        return jdbcTemplate.query(sql,
+                new Object[]{pageable.getPageSize(), pageable.getOffset()},
+                        (rs, rowNum) -> {
                     Long userId = rs.getLong("user_id");
                     String userName = rs.getString("user_name");
                     Long departmentId = rs.getLong("department_id");
@@ -47,10 +54,6 @@ public class UserRepositoryImpl implements UserRepository {
                             .forEach(user::addDepartment);
                     return user;
                 })
-                .collect(Collectors.toList())
-                .stream()
-                .skip(pageable.getOffset())
-                .limit(pageable.getPageSize())
                 .collect(Collectors.toList());
     }
 
